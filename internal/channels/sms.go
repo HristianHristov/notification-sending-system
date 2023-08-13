@@ -1,6 +1,7 @@
 package channels
 
 import (
+	"context"
 	"os"
 
 	"github.com/twilio/twilio-go"
@@ -9,33 +10,41 @@ import (
 
 // SMSChannel represents an SMS notification channel using the Twilio API.
 type SMSChannel struct {
-	accountSid string
-	authToken  string
-	fromNumber string
+	client *twilio.RestClient
 }
 
 // NewSMSChannel creates a new instance of the SMSChannel.
 func NewSMSChannel(accountSid, authToken, fromNumber string) *SMSChannel {
+	client := twilio.NewRestClient()
 	return &SMSChannel{
-		accountSid: accountSid,
-		authToken:  authToken,
-		fromNumber: fromNumber,
+		client: client,
 	}
 }
 
 // SendNotification sends an SMS notification to the specified phone number.
-func (s *SMSChannel) SendNotification(message, toNumber string) error {
-
-	// Initialize Twilio client
-	client := twilio.NewRestClient()
+func (s *SMSChannel) SendNotification(ctx context.Context, message string, recepients []string) error {
 
 	// Send SMS using Twilio API
 	params := &twilioApi.CreateMessageParams{}
-	params.SetTo(toNumber)
+	//params.SetTo(recepient)
 	params.SetFrom(os.Getenv("TWILIO_PHONE_NUMBER"))
 	params.SetBody(message)
 
-	_, err := client.Api.CreateMessage(params)
+	var err error
+	for _, recepient := range recepients {
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+			p := *params
+			p.SetTo(recepient)
+			_, err = s.client.Api.CreateMessage(&p)
+		}
 
+	}
 	return err
+}
+
+func (s *SMSChannel) GetType() string {
+	return "sms"
 }

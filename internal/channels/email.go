@@ -1,6 +1,7 @@
 package channels
 
 import (
+	"context"
 	"fmt"
 	"net/smtp"
 )
@@ -11,6 +12,7 @@ type EmailChannel struct {
 	smtpPort     int
 	smtpUsername string
 	smtpPassword string
+	smtpSendFunc func(string, smtp.Auth, string, []string, []byte) error
 }
 
 // NewEmailChannel creates a new instance of the EmailChannel.
@@ -20,22 +22,31 @@ func NewEmailChannel(smtpServer string, smtpPort int, smtpUsername, smtpPassword
 		smtpPort:     smtpPort,
 		smtpUsername: smtpUsername,
 		smtpPassword: smtpPassword,
+		smtpSendFunc: smtp.SendMail,
 	}
 }
 
 // SendNotification sends a notification email to the specified email address.
-func (e *EmailChannel) SendNotification(message string, toEmail string) error {
+func (e *EmailChannel) SendNotification(ctx context.Context, message string, recepients []string) error {
 	// Authenticate with the SMTP server using the provided credentials
 	auth := smtp.PlainAuth("", e.smtpUsername, e.smtpPassword, e.smtpServer)
 
-	// Construct the email message
-	msg := fmt.Sprintf("To: %s\r\nSubject: Notification\r\n\r\n%s", toEmail, message)
-
-	// Send the email using the SMTP server
-	err := smtp.SendMail(fmt.Sprintf("%s:%d", e.smtpServer, e.smtpPort), auth, e.smtpUsername, []string{toEmail}, []byte(msg))
-	if err != nil {
-		return err
+	var err error
+	for _, recepient := range recepients {
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+			// Construct the email message
+			msg := fmt.Sprintf("To: %s\r\nSubject: Notification\r\n\r\n%s", recepient, message)
+			err = e.smtpSendFunc(fmt.Sprintf("%s:%d", e.smtpServer, e.smtpPort), auth, e.smtpUsername, []string{recepient}, []byte(msg))
+		}
 	}
 
-	return nil
+	// Send the email using the SMTP server
+	return err
+}
+
+func (e *EmailChannel) GetType() string {
+	return "email"
 }

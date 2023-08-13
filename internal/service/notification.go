@@ -27,7 +27,7 @@ func (n *NotificationService) SendNotification(ctx context.Context, message stri
 						fmt.Printf("Error sending through %s channel: %s\n", ch.GetType(), err)
 					}
 				}(ctx, channel)
-				break // Send through only one channel of each type
+				//break // Send through only one channel of each type
 			} else {
 				log.Println("No such channel!")
 			}

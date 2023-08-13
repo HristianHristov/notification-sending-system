@@ -21,5 +21,5 @@ func main() {
 	message := "Hello, this is a notification!"
 	toEmail := []string{"recipient@example.com"}
 
-	notificationService.SendNotification(ctx, message, toEmail)
+	notificationService.SendNotification(ctx, message, toEmail, "email")
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"notification/internal/channels"
 	"time"
 )
@@ -16,28 +15,29 @@ func NewNotificationService(channels ...channels.NotificationChannel) *Notificat
 	return &NotificationService{channels: channels}
 }
 
-func (n *NotificationService) SendNotification(ctx context.Context, message string, params []string, targetChannels ...string) {
+func (n *NotificationService) SendNotification(ctx context.Context, message string, targetChannels ...string) {
 	for _, channel := range n.channels {
 		for _, target := range targetChannels {
 			if channel.GetType() == target {
 				go func(ctx context.Context, ch channels.NotificationChannel) {
 					// Use context for timeouts, cancellations, etc.
-					err := n.sendWithRetry(ctx, ch, message, params, 3) // Retry 3 times
+					err := n.sendWithRetry(ctx, ch, message, 3) // Retry 3 times
 					if err != nil {
+						println("Hello from goroutine")
 						fmt.Printf("Error sending through %s channel: %s\n", ch.GetType(), err)
 					}
 				}(ctx, channel)
 				//break // Send through only one channel of each type
 			} else {
-				log.Println("No such channel!")
+				println("No such channel!")
 			}
 		}
 	}
 }
 
-func (n *NotificationService) sendWithRetry(ctx context.Context, ch channels.NotificationChannel, message string, params []string, maxRetries int) error {
+func (n *NotificationService) sendWithRetry(ctx context.Context, ch channels.NotificationChannel, message string, maxRetries int) error {
 	for retries := 0; retries < maxRetries; retries++ {
-		err := ch.SendNotification(ctx, message, params) // Pass ctx and any required parameters
+		err := ch.SendNotification(ctx, message) // Pass ctx and any required parameters
 		if err == nil {
 			return nil // Sent successfully
 		}

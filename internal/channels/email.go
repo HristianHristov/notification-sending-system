@@ -12,6 +12,7 @@ type EmailChannel struct {
 	smtpPort     int
 	smtpUsername string
 	smtpPassword string
+	recepients   []string
 	smtpSendFunc func(string, smtp.Auth, string, []string, []byte) error
 }
 
@@ -26,13 +27,17 @@ func NewEmailChannel(smtpServer string, smtpPort int, smtpUsername, smtpPassword
 	}
 }
 
+func (e *EmailChannel) AddRecepients(recepients ...string) {
+	e.recepients = append(e.recepients, recepients...)
+}
+
 // SendNotification sends a notification email to the specified email address.
-func (e *EmailChannel) SendNotification(ctx context.Context, message string, recepients []string) error {
+func (e *EmailChannel) SendNotification(ctx context.Context, message string) error {
 	// Authenticate with the SMTP server using the provided credentials
 	auth := smtp.PlainAuth("", e.smtpUsername, e.smtpPassword, e.smtpServer)
 
 	var err error
-	for _, recepient := range recepients {
+	for _, recepient := range e.recepients {
 		select {
 		case <-ctx.Done():
 			err = ctx.Err()

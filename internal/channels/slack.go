@@ -7,9 +7,13 @@ import (
 	"github.com/slack-go/slack"
 )
 
+type SlackClient interface {
+	PostMessageContext(ctx context.Context, channelID string, options ...slack.MsgOption) (string, string, error)
+}
+
 // SlackChannel represents a Slack notification channel.
 type SlackChannel struct {
-	client     *slack.Client
+	client     SlackClient
 	recepients []string
 }
 
@@ -27,10 +31,10 @@ func (s *SlackChannel) AddRecepients(channels ...string) {
 }
 
 // SendNotification sends a message to a Slack channel with the provided name, if exists
-func (s *SlackChannel) SendNotification(ctx context.Context, message string, recepients []string) error {
+func (s *SlackChannel) SendNotification(ctx context.Context, message string) error {
 
 	var err error
-	for _, recepient := range recepients {
+	for _, recepient := range s.recepients {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

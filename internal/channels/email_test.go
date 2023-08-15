@@ -13,6 +13,7 @@ func TestEmailChannel_SendNotification(t *testing.T) {
 		return nil
 	}
 	emailChannel := NewEmailChannel("smtp.example.com", 587, "sender@example.com", "password")
+	emailChannel.AddRecepients("recipient@example.com")
 	emailChannel.smtpSendFunc = mockSMTPSend
 
 	// Define the context
@@ -20,7 +21,7 @@ func TestEmailChannel_SendNotification(t *testing.T) {
 	defer cancel()
 
 	// Test successful email sending
-	err := emailChannel.SendNotification(ctx, "Test message", []string{"recipient@example.com"})
+	err := emailChannel.SendNotification(ctx, "Test message")
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
@@ -29,7 +30,7 @@ func TestEmailChannel_SendNotification(t *testing.T) {
 	cancelledCtx, cancel := context.WithCancel(context.Background())
 	cancel() // Immediately cancel the context
 
-	err = emailChannel.SendNotification(cancelledCtx, "Cancelled message", []string{"recipient@example.com"})
+	err = emailChannel.SendNotification(cancelledCtx, "Cancelled message")
 	if err == nil || err != context.Canceled {
 		t.Errorf("Expected context cancellation error, but got: %v", err)
 	}

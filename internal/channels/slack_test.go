@@ -8,33 +8,31 @@ import (
 	"github.com/slack-go/slack"
 )
 
-// SlackClient is an interface that represents the methods of slack.Client needed by SlackChannel.
-type SlackClient interface {
-	PostMessageContext(ctx context.Context, channelID string, options ...slack.MsgOption) (string, string, error)
-}
-
 // MockSlackClient is a mock implementation of the SlackClient interface.
 type MockSlackClient struct {
-	postMessageFunc func(channelID string, options ...slack.MsgOption) (string, string, error)
+	postMessageFuncMock func(ctx context.Context, channelID string, options ...slack.MsgOption) (string, string, error)
 }
 
 func (m *MockSlackClient) PostMessageContext(ctx context.Context, channelID string, options ...slack.MsgOption) (string, string, error) {
-	return m.postMessageFunc(channelID, options...)
+	return m.postMessageFuncMock(ctx, channelID, options...)
 }
 
 func TestSlackChannel_SendNotification_Success(t *testing.T) {
 	mockClient := &MockSlackClient{
-		postMessageFunc: func(channelID string, options ...slack.MsgOption) (string, string, error) {
+		postMessageFuncMock: func(ctx context.Context, channelID string, options ...slack.MsgOption) (string, string, error) {
 			return "", "", nil
 		},
 	}
 
 	// Create a SlackChannel instance with the mock client
 	channel := &SlackChannel{
-		client: mockClient,
+		client:     mockClient,
+		recepients: []string{},
 	}
 
-	err := channel.SendNotification(context.Background(), "Test message", "channel_id_1")
+	channel.AddRecepients("test1", "test2")
+
+	err := channel.SendNotification(context.Background(), "Test message")
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
@@ -42,17 +40,20 @@ func TestSlackChannel_SendNotification_Success(t *testing.T) {
 
 func TestSlackChannel_SendNotification_Error(t *testing.T) {
 	mockClient := &MockSlackClient{
-		postMessageFunc: func(channelID string, options ...slack.MsgOption) (string, string, error) {
-			return "", "", errors.New("mock error")
+		postMessageFuncMock: func(ctx context.Context, channelID string, options ...slack.MsgOption) (string, string, error) {
+			return "", "", errors.New("Error")
 		},
 	}
 
 	// Create a SlackChannel instance with the mock client
 	channel := &SlackChannel{
-		client: mockClient,
+		client:     mockClient,
+		recepients: []string{},
 	}
 
-	err := channel.SendNotification(context.Background(), "Test message", "channel_id_1")
+	channel.AddRecepients("test1", "test2")
+
+	err := channel.SendNotification(context.Background(), "Test message")
 	if err == nil {
 		t.Errorf("Expected an error, but got none")
 	}

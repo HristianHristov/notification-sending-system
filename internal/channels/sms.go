@@ -8,39 +8,46 @@ import (
 	twilioApi "github.com/twilio/twilio-go/rest/api/v2010"
 )
 
+type SMSClient interface {
+	CreateMessage(params *twilioApi.CreateMessageParams) (*twilioApi.ApiV2010Message, error)
+}
+
 // SMSChannel represents an SMS notification channel using the Twilio API.
 type SMSChannel struct {
-	client *twilio.RestClient
+	client     SMSClient
+	recepients []string
 }
 
 // NewSMSChannel creates a new instance of the SMSChannel.
-func NewSMSChannel(accountSid, authToken, fromNumber string) *SMSChannel {
-	client := twilio.NewRestClient()
+func NewSMSChannel(accountSid, authToken string) *SMSChannel {
+	client := twilio.NewRestClient().Api
 	return &SMSChannel{
-		client: client,
+		client:     client,
+		recepients: []string{},
 	}
 }
 
+func (s *SMSChannel) AddRecepients(recepients ...string) {
+	s.recepients = append(s.recepients, recepients...)
+}
+
 // SendNotification sends an SMS notification to the specified phone number.
-func (s *SMSChannel) SendNotification(ctx context.Context, message string, recepients []string) error {
+func (s *SMSChannel) SendNotification(ctx context.Context, message string) error {
 
 	// Send SMS using Twilio API
 	params := &twilioApi.CreateMessageParams{}
-	//params.SetTo(recepient)
 	params.SetFrom(os.Getenv("TWILIO_PHONE_NUMBER"))
 	params.SetBody(message)
 
 	var err error
-	for _, recepient := range recepients {
+	for _, recepient := range s.recepients {
 		select {
 		case <-ctx.Done():
 			err = ctx.Err()
 		default:
-			p := *params
-			p.SetTo(recepient)
-			_, err = s.client.Api.CreateMessage(&p)
+			params.SetTo(recepient)
+			_, err = s.client.CreateMessage(params)
 		}
-
 	}
 	return err
 }

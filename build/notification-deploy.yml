@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+    spec:
+      containers:
+        - name: notification-app
+          image: your-docker-image:tag
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: 0.5
+              memory: "512Mi"
+            requests:
+              cpu: 0.2
+              memory: "256Mi"

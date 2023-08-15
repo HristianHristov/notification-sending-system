@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package notifications;
+
+option go_package = "notification/notifications";
+
+message Message { string text = 1; }
+
+message ChannelConfig {
+  string type = 1;
+  repeated string recipients = 2;
+}
+
+service NotificationService {
+  rpc SendNotifications(NotificationRequest)
+      returns (stream NotificationResponse);
+}
+
+message NotificationRequest {
+  Message message = 1;
+  repeated ChannelConfig channel_configs = 2;
+}
+
+message NotificationResponse { bool success = 1; }

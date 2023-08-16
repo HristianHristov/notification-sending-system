@@ -98,9 +98,9 @@ The system is designed to be easily extensible. Adding support for new notificat
 ## Error Handling
 
 The system handles errors at multiple levels, including:
--Notification channel-specific errors
--Retrying failed notifications
--Streaming errors and successes back to the client
+- Notification channel-specific errors
+- Retrying failed notifications
+- Streaming errors and successes back to the client
 Errors are managed using channels, goroutines, and sync.WaitGroup to ensure that failures in one channel do not affect others and do not close the client stream.
 
 ## TODO

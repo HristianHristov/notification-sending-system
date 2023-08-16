@@ -21,4 +21,7 @@ message NotificationRequest {
   repeated ChannelConfig channel_configs = 2;
 }
 
-message NotificationResponse { bool success = 1; }
+message NotificationResponse {
+  bool success = 1;
+  string error = 2;
+}

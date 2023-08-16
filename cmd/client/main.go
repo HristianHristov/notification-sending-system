@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	notifications "notification/api" // Import the generated package
 
@@ -46,6 +47,10 @@ func main() {
 
 	for {
 		resp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+
 		if err != nil {
 			log.Printf("Error receiving response: %v", err)
 			break

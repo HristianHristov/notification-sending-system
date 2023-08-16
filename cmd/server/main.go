@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 	"net"
-	"notification/internal/channels"
-
 	notifications "notification/api" // Import the generated package
+	"notification/internal/channels"
 	"notification/internal/service"
+	"os"
 
 	"google.golang.org/grpc"
 )
@@ -25,39 +25,43 @@ func (s *NotificationServer) SendNotifications(req *notifications.NotificationRe
 	notificationService := service.NewNotificationService()
 
 	// Create channels and add recipients
-	targetChannels := make([]string, 0)
+	// To improve this implementation we could implement a factory
 	for _, config := range req.ChannelConfigs {
 		switch config.Type {
 		case "email":
-			emailChannel := channels.NewEmailChannel("smtp.example.com", 587, "smtp_username", "smtp_password")
+			emailChannel := channels.NewEmailChannel(os.Getenv("SMTP_SERVER"), 25, os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD"))
 			emailChannel.AddRecepients(config.Recipients...)
 			notificationService.AddNotificationChannels(emailChannel)
-			targetChannels = append(targetChannels, "email")
 		case "sms":
-			smsChannel := channels.NewSMSChannel("twilio_account_sid", "twilio_auth_token")
+			smsChannel := channels.NewSMSChannel(os.Getenv("TWILIO_ACCOUNT_SID"), os.Getenv("TWILIO_AUTH_TOKEN"))
 			smsChannel.AddRecepients(config.Recipients...)
 			notificationService.AddNotificationChannels(smsChannel)
-			targetChannels = append(targetChannels, "sms")
 		case "slack":
-			slackChannel := channels.NewSlackChannel("slack_api_token")
+			slackChannel := channels.NewSlackChannel(os.Getenv("SLACK_API_TOKEN"))
 			slackChannel.AddRecepients(config.Recipients...)
 			notificationService.AddNotificationChannels(slackChannel)
-			targetChannels = append(targetChannels, "slack")
 		default:
 			log.Println("No such channel type")
 		}
 	}
 
 	// Send notifications and wait for goroutines to finish
-	err := notificationService.SendNotifications(context.Background(), req.Message.Text, targetChannels...)
-	if err != nil {
-		log.Printf("Error sending notifications: %v", err)
-	}
+	errChan := notificationService.SendNotifications(context.Background(), req.Message.Text)
 
-	_ = stream.Send(&notifications.NotificationResponse{Success: true})
+	// Iterate over the error channel and send responses to the client
+	for err := range errChan {
+		errResp := &notifications.NotificationResponse{
+			Success: false,
+			Error:   err.Error(),
+		}
+		if sendErr := stream.Send(errResp); sendErr != nil {
+			log.Printf("Error sending response to client: %v", sendErr)
+		}
+	}
 
 	return nil
 }
+
 func main() {
 	// Create and start the gRPC server
 	server := grpc.NewServer()

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: notification-app
-          image: your-docker-image:tag
+          image: notification-app:latest
           ports:
             - containerPort: 8080
           resources:

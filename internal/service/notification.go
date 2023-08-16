@@ -22,30 +22,32 @@ func (n *NotificationService) AddNotificationChannels(channels ...channels.Notif
 	n.channels = append(n.channels, channels...)
 }
 
-func (n *NotificationService) SendNotifications(ctx context.Context, message string, targetChannels ...string) error {
+func (n *NotificationService) SendNotifications(ctx context.Context, message string, targetChannels ...string) <-chan (error) {
 	var wg sync.WaitGroup // Create a WaitGroup to wait for all goroutines
+	errChan := make(chan error, len(targetChannels))
 
 	for _, channel := range n.channels {
-		for _, target := range targetChannels {
-			if channel.GetType() == target {
-				wg.Add(1) // Increment the WaitGroup counter
+		wg.Add(1) // Increment the WaitGroup counter
 
-				go func(ctx context.Context, ch channels.NotificationChannel) {
-					defer wg.Done() // Decrement the WaitGroup counter when the goroutine finishes
+		go func(ctx context.Context, ch channels.NotificationChannel) {
+			defer wg.Done() // Decrement the WaitGroup counter when the goroutine finishes
 
-					// Use context for timeouts, cancellations, etc.
-					err := n.sendWithRetry(ctx, ch, message, 3) // Retry 3 times
-					if err != nil {
-						log.Printf("Error sending through %s channel: %s\n", ch.GetType(), err)
-					}
-				}(ctx, channel)
+			// Use context for timeouts, cancellations, etc.
+			err := n.sendWithRetry(ctx, ch, message, 3) // Retry 3 times
+			if err != nil {
+				log.Printf("Error sending through %s channel: %s\n", ch.GetType(), err)
+				errChan <- err
+				log.Printf("After Adding to chan")
 			}
-		}
+		}(ctx, channel)
 	}
 
-	wg.Wait() // Wait for all goroutines to finish before returning
+	go func() {
+		defer close(errChan)
+		wg.Wait() // Wait for all goroutines to finish before returning
+	}()
 
-	return nil
+	return errChan
 }
 
 func (n *NotificationService) sendWithRetry(ctx context.Context, ch channels.NotificationChannel, message string, maxRetries int) error {

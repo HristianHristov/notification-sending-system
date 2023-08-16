@@ -26,6 +26,7 @@ func NewSlackChannel(apiToken string) *SlackChannel {
 	}
 }
 
+// AddRecepients adds a list of recepients to the channel
 func (s *SlackChannel) AddRecepients(channels ...string) {
 	s.recepients = append(s.recepients, channels...)
 }
